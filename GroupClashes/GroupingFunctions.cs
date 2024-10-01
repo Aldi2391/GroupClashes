@@ -237,14 +237,18 @@ namespace GroupClashes
                 string displayName = "Empty clash";
                 if (modelItem != null)
                 {
-                    displayName = modelItem.DisplayName;
+                    //displayName = modelItem.DisplayName;
+                    displayName = GetPropertyTypeValue(modelItem);
+                    
                     //Create a group
                     if (!groups.TryGetValue(modelItem, out currentGroup))
                     {
                         currentGroup = new ClashResultGroup();
                         if (string.IsNullOrEmpty(displayName)){ displayName = modelItem.Parent.DisplayName; }
                         if (string.IsNullOrEmpty(displayName)) { displayName = "Unnamed Parent"; }
-                        currentGroup.DisplayName = initialName + displayName;
+
+                        //currentGroup.DisplayName = initialName + displayName;
+                        currentGroup.DisplayName = $"{GetClashTestName(currentGroup)}_{displayName}";
                         groups.Add(modelItem, currentGroup);
                     }
 
@@ -259,10 +263,6 @@ namespace GroupClashes
                     oneClashResultGroup.Children.Add(copiedResult);
                     emptyClashResultGroups.Add(oneClashResultGroup);
                 }
-
-
-
-
             }
 
             List<ClashResultGroup> allGroups = groups.Values.ToList();
@@ -510,6 +510,46 @@ namespace GroupClashes
 
         #endregion
 
+        #region Добавленные методы
+
+        private static string GetPropertyTypeValue(ModelItem modelItem)
+        {
+            DataProperty typeProperty = modelItem.PropertyCategories
+                .SelectMany(cat => cat.Properties)
+                .FirstOrDefault(prop => prop.DisplayName == "Тип" || prop.DisplayName == "Type");
+
+            if (typeProperty != null)
+            {
+                return typeProperty.DisplayName;
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string GetClashTestName(ClashResultGroup clashgroup)
+        {
+            SavedItem savedData = clashgroup.Parent;
+            
+            while(!(savedData is ClashTest))
+            {
+                if(savedData is ClashResultGroup group)
+                {
+                    savedData = group.Parent;
+                }
+            }
+
+            if (savedData is ClashTest clashTest)
+            {
+                return clashTest.DisplayName;
+            }
+            else
+            {
+                return "No clash test";
+            }
+        }
+        #endregion
     }
 
     public enum GroupingMode
@@ -535,5 +575,4 @@ namespace GroupClashes
         [Description("Status")]
         Status
     }
-
 }
