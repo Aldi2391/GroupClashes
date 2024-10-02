@@ -235,20 +235,47 @@ namespace GroupClashes
                 }
 
                 string displayName = "Empty clash";
+               
                 if (modelItem != null)
                 {
                     //displayName = modelItem.DisplayName;
                     displayName = GetPropertyTypeValue(modelItem);
-                    
+                    //if (string.IsNullOrEmpty(displayName))
+                    //{
+                    //    // Обработка ситуации, когда значение пустое или null
+                    //    displayName = "Unnamed Item";
+                    //}
+
                     //Create a group
                     if (!groups.TryGetValue(modelItem, out currentGroup))
                     {
                         currentGroup = new ClashResultGroup();
-                        if (string.IsNullOrEmpty(displayName)){ displayName = modelItem.Parent.DisplayName; }
-                        if (string.IsNullOrEmpty(displayName)) { displayName = "Unnamed Parent"; }
+                        if (string.IsNullOrEmpty(displayName))
+                        {
+                            if (modelItem.Parent != null && !string.IsNullOrEmpty(modelItem.Parent.DisplayName))
+                            {
+                                displayName = modelItem.Parent.DisplayName;
+                            }
+                            else
+                            {
+                                displayName = "Unnamed Parent";
+                            }
+                        }
 
                         //currentGroup.DisplayName = initialName + displayName;
-                        currentGroup.DisplayName = $"{GetClashTestName(currentGroup)}_{displayName}";
+                        string clashTestName = "No test name";
+                        var clashTest = GetParentClashTest(result);
+                        
+                        if (clashTest != null)
+                        {
+                            clashTestName = clashTest.DisplayName;
+                            if(clashTestName.Contains("CR_"))
+                            {
+                                int index = clashTestName.IndexOf("CR_") + "CR_".Length;
+                                clashTestName = clashTestName.Insert(index, "GP_");
+                            }
+                        }
+                        currentGroup.DisplayName = $"{clashTestName}_{displayName}";
                         groups.Add(modelItem, currentGroup);
                     }
 
@@ -514,40 +541,28 @@ namespace GroupClashes
 
         private static string GetPropertyTypeValue(ModelItem modelItem)
         {
-            DataProperty typeProperty = modelItem.PropertyCategories
-                .SelectMany(cat => cat.Properties)
-                .FirstOrDefault(prop => prop.DisplayName == "Тип" || prop.DisplayName == "Type");
+            string out_sting = string.Empty;
 
-            if (typeProperty != null)
+            DataProperty categoryName = modelItem.PropertyCategories.FindPropertyByDisplayName("Element", "Category");
+            DataProperty elementName = modelItem.PropertyCategories.FindPropertyByDisplayName("Element", "Name");
+
+            if (categoryName != null && elementName != null)
             {
-                return typeProperty.DisplayName;
+                out_sting = $"{categoryName.Value.ToDisplayString()}-{elementName.Value.ToDisplayString()}";
             }
-            else
-            {
-                return string.Empty;
-            }
+
+            return out_sting;
         }
 
-        private static string GetClashTestName(ClashResultGroup clashgroup)
+        private static ClashTest GetParentClashTest(SavedItem item)
         {
-            SavedItem savedData = clashgroup.Parent;
-            
-            while(!(savedData is ClashTest))
-            {
-                if(savedData is ClashResultGroup group)
-                {
-                    savedData = group.Parent;
-                }
-            }
+            if (item == null)
+                return null;
 
-            if (savedData is ClashTest clashTest)
-            {
-                return clashTest.DisplayName;
-            }
-            else
-            {
-                return "No clash test";
-            }
+            if (item is ClashTest clashTest)
+                return clashTest;
+
+            return GetParentClashTest(item.Parent);
         }
         #endregion
     }
